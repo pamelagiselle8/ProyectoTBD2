@@ -6,6 +6,8 @@ import javax.swing.JOptionPane;
 
 
 public class Configuracion extends javax.swing.JFrame {
+    Connection connPostgreSQL = null;
+    Connection connOracle = null;
 
     
     public Configuracion() {
@@ -133,7 +135,7 @@ public class Configuracion extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnProbar1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar1ActionPerformed
-        Connection conn = null;
+        Connection connPostgreSQL = null;
         String nomBD = nomBD1.getText();
         String url = "jdbc:postgresql://localhost:5432/" + nomBD;
         String user = user1.getText();
@@ -141,9 +143,9 @@ public class Configuracion extends javax.swing.JFrame {
 
         try {
             Class.forName("org.postgresql.Driver");
-            conn = DriverManager.getConnection(url, user, pass);
+            connPostgreSQL = DriverManager.getConnection(url, user, pass);
             JOptionPane.showMessageDialog(this, "Conexion exitosa\n");
-            conn.close();
+            connPostgreSQL.close();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar\n" + e);
         }
