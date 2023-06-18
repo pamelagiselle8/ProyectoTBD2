@@ -30,7 +30,38 @@ public class FrameConexion extends javax.swing.JFrame {
         FrameReplicacion.setLocationRelativeTo(this);
         FrameReplicacion.setSize(670, 520);
     }
+    
+    // Actualizar la lista de tablas disponibles para replicacion
+    public void cargarListas() {
+        if (conexion1 && conexion2) {
+            modelDisp = new DefaultListModel();
+            modelRep = new DefaultListModel();
 
+            // Consulta para obtener los nombres de las tablas origen
+            String query = "SELECT table_name " +
+                        "FROM information_schema.tables " +
+                        "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
+            try {
+                // Ejecutar la consulta
+                PreparedStatement statement = connPostgreSQL.prepareStatement(query);
+                ResultSet resultSet = statement.executeQuery();
+
+                // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
+                while (resultSet.next()) {
+                    String tableName = resultSet.getString("table_name");
+                    modelDisp.addElement(tableName);
+                }
+
+            } catch (SQLException ex) {
+                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            // Actualizar las listas
+            jlistDisp.setModel(modelDisp);
+            jlistRep.setModel(modelRep);
+        }
+        
+    }
     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -45,11 +76,12 @@ public class FrameConexion extends javax.swing.JFrame {
         btnNoRep = new javax.swing.JButton();
         jLabel16 = new javax.swing.JLabel();
         btnGuardarRep = new javax.swing.JButton();
-        btnCancelarRep = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         jlistRep = new javax.swing.JList<>();
         btnRegresar = new javax.swing.JButton();
+        btnCancelarRep = new javax.swing.JButton();
+        jFrame1 = new javax.swing.JFrame();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
@@ -120,10 +152,12 @@ public class FrameConexion extends javax.swing.JFrame {
         FrameReplicacion.getContentPane().add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 120, -1, -1));
 
         btnGuardarRep.setText("Guardar");
+        btnGuardarRep.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGuardarRepActionPerformed(evt);
+            }
+        });
         FrameReplicacion.getContentPane().add(btnGuardarRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 400, -1, -1));
-
-        btnCancelarRep.setText("Cancelar");
-        FrameReplicacion.getContentPane().add(btnCancelarRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 400, -1, -1));
 
         jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -143,6 +177,14 @@ public class FrameConexion extends javax.swing.JFrame {
             }
         });
         jPanel2.add(btnRegresar, new org.netbeans.lib.awtextra.AbsoluteConstraints(550, 460, -1, -1));
+
+        btnCancelarRep.setText("Cancelar");
+        btnCancelarRep.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCancelarRepActionPerformed(evt);
+            }
+        });
+        jPanel2.add(btnCancelarRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 400, -1, -1));
 
         FrameReplicacion.getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 670, 520));
 
@@ -271,41 +313,15 @@ public class FrameConexion extends javax.swing.JFrame {
     
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
         if (conexion1 && conexion2) {
-            modelDisp = new DefaultListModel();
-            modelRep = new DefaultListModel();
-            
             // Crear log table en la BD origen
-            String queryLogTable = "DROP TABLE IF EXISTS bitacora; " +
+            String queryLogTable =  "DROP TABLE IF EXISTS bitacora; " +
                                     "CREATE TABLE bitacora (" +
                                     "id serial PRIMARY KEY, " +
                                     "fecha timestamp, " +
                                     "accion varchar(2000), " +
                                     "deshacer varchar(2000));";
-            
-            // Actualizar la lista de tablas disponibles para replicacion
-            
-            // Consulta para obtener los nombres de las tablas origen
-            String query = "SELECT table_name " +
-                        "FROM information_schema.tables " +
-                        "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
-            try {
-                // Ejecutar la consulta
-                PreparedStatement statement = connPostgreSQL.prepareStatement(query);
-                ResultSet resultSet = statement.executeQuery();
-
-                // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
-                while (resultSet.next()) {
-                    String tableName = resultSet.getString("table_name");
-                    modelDisp.addElement(tableName);
-                }
-                
-            } catch (SQLException ex) {
-                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            
-            // Actualizar las listas
-            jlistDisp.setModel(modelDisp);
-            jlistRep.setModel(modelRep);
+            // Cargar la lista de tablas disponibles para replicacion
+            cargarListas();
             FrameReplicacion.setVisible(true);
             this.setVisible(false);
         }
@@ -320,7 +336,7 @@ public class FrameConexion extends javax.swing.JFrame {
         try {
             conexion1 = false;
             conexion2 = false;
-            connOracle.close();
+//            connOracle.close();
             connPostgreSQL.close();
         } catch (SQLException ex) {
             Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
@@ -341,10 +357,19 @@ public class FrameConexion extends javax.swing.JFrame {
             // Quitar una tabla de la lista de tablas a replicar
             modelDisp.addElement(modelRep.elementAt(jlistRep.getSelectedIndex()));
             modelRep.remove(jlistRep.getSelectedIndex());
-            
         }
         else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnNoRepActionPerformed
+
+    private void btnGuardarRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarRepActionPerformed
+        // Ejecutar el job de replicacion en la BD destino
+        
+    }//GEN-LAST:event_btnGuardarRepActionPerformed
+
+    private void btnCancelarRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelarRepActionPerformed
+        // Descartar cambios
+        cargarListas();
+    }//GEN-LAST:event_btnCancelarRepActionPerformed
 
     
     public static void main(String args[]) {
@@ -390,6 +415,7 @@ public class FrameConexion extends javax.swing.JFrame {
     private javax.swing.JButton btnProbar2;
     private javax.swing.JButton btnRegresar;
     private javax.swing.JButton btnRep;
+    private javax.swing.JFrame jFrame1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
