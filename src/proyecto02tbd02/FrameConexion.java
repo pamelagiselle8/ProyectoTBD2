@@ -20,10 +20,14 @@ public class FrameConexion extends javax.swing.JFrame {
             userOrigen = "", userDestino = "",
             passOrigen = "", passDestino = "";
     boolean conexion1 = false, conexion2 = true;
+    DefaultListModel modelDisp = new DefaultListModel(),
+                    modelRep = new DefaultListModel();
     
     public FrameConexion() {
         initComponents();
         this.setLocationRelativeTo(null);
+        FrameReplicacion.setLocationRelativeTo(this);
+        FrameReplicacion.setSize(670, 520);
     }
 
     
@@ -95,9 +99,19 @@ public class FrameConexion extends javax.swing.JFrame {
         FrameReplicacion.getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 170, 160, -1));
 
         btnRep.setText("->");
+        btnRep.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRepActionPerformed(evt);
+            }
+        });
         FrameReplicacion.getContentPane().add(btnRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 220, 70, -1));
 
         btnNoRep.setText("<-");
+        btnNoRep.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnNoRepActionPerformed(evt);
+            }
+        });
         FrameReplicacion.getContentPane().add(btnNoRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 260, 70, -1));
 
         jLabel16.setFont(new java.awt.Font("Helvetica Neue", 0, 14)); // NOI18N
@@ -264,19 +278,19 @@ public class FrameConexion extends javax.swing.JFrame {
     
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
         if (conexion1 && conexion2) {
-            DefaultListModel modelDisp = new DefaultListModel(),
-                    modelRep = new DefaultListModel();
+            modelDisp = new DefaultListModel();
+            modelRep = new DefaultListModel();
             
             // Actualizar la lista de tablas disponibles para replicacion
             
             // Consulta para obtener los nombres de las tablas origen
             String query = "SELECT table_name"
-                    + "FROM information_schema.tables";
-                    // + "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
+                    + " FROM information_schema.tables"
+                    + " WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
             try {
                 // Ejecutar la consulta
-                PreparedStatement statement = (PreparedStatement) connPostgreSQL.createStatement();
-                ResultSet resultSet = statement.executeQuery(query);
+                PreparedStatement statement = connPostgreSQL.prepareStatement(query);
+                ResultSet resultSet = statement.executeQuery();
 
                 // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
                 while (resultSet.next()) {
@@ -288,10 +302,9 @@ public class FrameConexion extends javax.swing.JFrame {
                 Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
             }
             
-            
+            // Actualizar las listas
             jlistDisp.setModel(modelDisp);
             jlistRep.setModel(modelRep);
-            FrameReplicacion.setSize(580, 186);
             FrameReplicacion.setVisible(true);
             this.setVisible(false);
         }
@@ -304,12 +317,41 @@ public class FrameConexion extends javax.swing.JFrame {
         FrameReplicacion.setVisible(false);
         this.setVisible(true);
         try {
+            conexion1 = false;
+            conexion2 = false;
             connOracle.close();
             connPostgreSQL.close();
         } catch (SQLException ex) {
             Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnRegresarActionPerformed
+
+    private void btnRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRepActionPerformed
+        if (jlistDisp.getSelectedIndex() >= 0) {
+//            modelDisp = (DefaultListModel) jlistDisp.getModel();
+//            modelRep = (DefaultListModel) jlistRep.getModel();
+            if (!modelRep.contains(modelDisp.elementAt(jlistDisp.getSelectedIndex()))) {
+                modelRep.addElement(modelDisp.elementAt(jlistDisp.getSelectedIndex()));
+            }
+            else {
+                JOptionPane.showMessageDialog(this, "La tabla ya fue agregada.");
+            }
+        }
+        else{
+            JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla.");
+        }
+    }//GEN-LAST:event_btnRepActionPerformed
+
+    private void btnNoRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNoRepActionPerformed
+        if (jlistRep.getSelectedIndex() >= 0) {
+            modelRep = (DefaultListModel) jlistRep.getModel();
+            modelDisp = (DefaultListModel) jlistDisp.getModel();
+            modelRep.remove(jlistRep.getSelectedIndex());
+        }
+        else{
+            JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla.");
+        }
+    }//GEN-LAST:event_btnNoRepActionPerformed
 
     
     public static void main(String args[]) {
