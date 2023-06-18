@@ -1,16 +1,27 @@
 package proyecto02tbd02;
 
+import java.beans.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 
 
-public class Configuracion extends javax.swing.JFrame {
+public class FrameConexion extends javax.swing.JFrame {
     Connection connPostgreSQL = null;
     Connection connOracle = null;
-
+    String nomBDOrigen = "", nomBDDestino = "",
+            portOrigen = "", portDestino = "",
+            userOrigen = "", userDestino = "",
+            passOrigen = "", passDestino = "";
+    boolean conexion1 = false, conexion2 = true;
     
-    public Configuracion() {
+    public FrameConexion() {
         initComponents();
         this.setLocationRelativeTo(null);
     }
@@ -20,6 +31,20 @@ public class Configuracion extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        FrameReplicacion = new javax.swing.JFrame();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jlistDisp = new javax.swing.JList<>();
+        btnRep = new javax.swing.JButton();
+        btnNoRep = new javax.swing.JButton();
+        jLabel16 = new javax.swing.JLabel();
+        btnGuardarRep = new javax.swing.JButton();
+        btnCancelarRep = new javax.swing.JButton();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jlistRep = new javax.swing.JList<>();
+        btnRegresar = new javax.swing.JButton();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
@@ -48,7 +73,66 @@ public class Configuracion extends javax.swing.JFrame {
         nomInst2 = new javax.swing.JTextField();
         btnProbar1 = new javax.swing.JButton();
 
+        FrameReplicacion.setResizable(false);
+        FrameReplicacion.setSize(new java.awt.Dimension(670, 520));
+        FrameReplicacion.getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel14.setFont(new java.awt.Font("Helvetica Neue", 1, 18)); // NOI18N
+        jLabel14.setText("Tablas BD Origen");
+        FrameReplicacion.getContentPane().add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 70, -1, -1));
+
+        jLabel15.setFont(new java.awt.Font("Helvetica Neue", 0, 14)); // NOI18N
+        jLabel15.setText("Sin replicar");
+        FrameReplicacion.getContentPane().add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 120, 80, -1));
+
+        jlistDisp.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane1.setViewportView(jlistDisp);
+
+        FrameReplicacion.getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 170, 160, -1));
+
+        btnRep.setText("->");
+        FrameReplicacion.getContentPane().add(btnRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 220, 70, -1));
+
+        btnNoRep.setText("<-");
+        FrameReplicacion.getContentPane().add(btnNoRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 260, 70, -1));
+
+        jLabel16.setFont(new java.awt.Font("Helvetica Neue", 0, 14)); // NOI18N
+        jLabel16.setText("Replicando");
+        FrameReplicacion.getContentPane().add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 120, -1, -1));
+
+        btnGuardarRep.setText("Guardar");
+        FrameReplicacion.getContentPane().add(btnGuardarRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 400, -1, -1));
+
+        btnCancelarRep.setText("Cancelar");
+        FrameReplicacion.getContentPane().add(btnCancelarRep, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 400, -1, -1));
+
+        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jlistRep.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane2.setViewportView(jlistRep);
+
+        jPanel2.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(420, 170, 160, -1));
+
+        btnRegresar.setText("Regresar");
+        btnRegresar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRegresarActionPerformed(evt);
+            }
+        });
+        jPanel2.add(btnRegresar, new org.netbeans.lib.awtextra.AbsoluteConstraints(550, 460, -1, -1));
+
+        FrameReplicacion.getContentPane().add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 670, 520));
+
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel3.setFont(new java.awt.Font("Helvetica Neue", 0, 14)); // NOI18N
@@ -135,30 +219,97 @@ public class Configuracion extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnProbar1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar1ActionPerformed
-        Connection connPostgreSQL = null;
+        connPostgreSQL = null;
         String nomBD = nomBD1.getText();
-        String url = "jdbc:postgresql://localhost:5432/" + nomBD;
-        String user = user1.getText();
+        String puerto = (puerto1.getText().isEmpty() ? "5432" : puerto1.getText());
+        String url = "jdbc:postgresql://localhost:" + puerto + "/" + nomBD;
+        String user = (user1.getText().isEmpty() ? "postgres" : user1.getText());
         String pass = pass1.getText();
 
         try {
             Class.forName("org.postgresql.Driver");
             connPostgreSQL = DriverManager.getConnection(url, user, pass);
             JOptionPane.showMessageDialog(this, "Conexion exitosa\n");
-            connPostgreSQL.close();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al conectar\n" + e);
+            conexion1 = true;
+            // Aquí puedes ejecutar tus consultas o realizar otras operaciones en la base de datos
+//            connPostgreSQL.close();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
     }//GEN-LAST:event_btnProbar1ActionPerformed
 
     private void btnProbar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar2ActionPerformed
-        
-    }//GEN-LAST:event_btnProbar2ActionPerformed
+        connOracle = null;
+        String nomBD = nomBD2.getText();
+        String puerto = (puerto1.getText().isEmpty() ? "1521" : puerto1.getText());
+        String url = "jdbc:oracle:thin:@localhost:" + puerto + ":xe";
+        String user = (user2.getText().isEmpty() ? "SYSTEM" : user2.getText());
+        String pass = pass2.getText();
 
+        try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+            connOracle = DriverManager.getConnection(url, user, pass);
+            System.out.println("Conexión exitosa");
+            conexion2 = true;
+            // Aquí puedes ejecutar tus consultas o realizar otras operaciones en la base de datos
+//            connOracle.close();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }//GEN-LAST:event_btnProbar2ActionPerformed
+    
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
-        
+        if (conexion1 && conexion2) {
+            DefaultListModel modelDisp = new DefaultListModel(),
+                    modelRep = new DefaultListModel();
+            
+            // Actualizar la lista de tablas disponibles para replicacion
+            
+            // Consulta para obtener los nombres de las tablas origen
+            String query = "SELECT table_name"
+                    + "FROM information_schema.tables";
+                    // + "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
+            try {
+                // Ejecutar la consulta
+                PreparedStatement statement = (PreparedStatement) connPostgreSQL.createStatement();
+                ResultSet resultSet = statement.executeQuery(query);
+
+                // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
+                while (resultSet.next()) {
+                    String tableName = resultSet.getString("table_name");
+                    modelDisp.addElement(tableName);
+                }
+                
+            } catch (SQLException ex) {
+                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            
+            jlistDisp.setModel(modelDisp);
+            jlistRep.setModel(modelRep);
+            FrameReplicacion.setSize(580, 186);
+            FrameReplicacion.setVisible(true);
+            this.setVisible(false);
+        }
+        else {
+            JOptionPane.showMessageDialog(this, "Las conexiones a las bases de datos deben ser exitosas para continuar.");
+        }
     }//GEN-LAST:event_btnGuardarActionPerformed
+
+    private void btnRegresarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegresarActionPerformed
+        FrameReplicacion.setVisible(false);
+        this.setVisible(true);
+        try {
+            connOracle.close();
+            connPostgreSQL.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_btnRegresarActionPerformed
 
     
     public static void main(String args[]) {
@@ -175,33 +326,43 @@ public class Configuracion extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Configuracion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FrameConexion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Configuracion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FrameConexion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Configuracion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FrameConexion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Configuracion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FrameConexion.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Configuracion().setVisible(true);
+                new FrameConexion().setVisible(true);
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JFrame FrameReplicacion;
+    private javax.swing.JButton btnCancelarRep;
     private javax.swing.JButton btnGuardar;
+    private javax.swing.JButton btnGuardarRep;
+    private javax.swing.JButton btnNoRep;
     private javax.swing.JButton btnProbar1;
     private javax.swing.JButton btnProbar2;
+    private javax.swing.JButton btnRegresar;
+    private javax.swing.JButton btnRep;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -211,6 +372,11 @@ public class Configuracion extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JList<String> jlistDisp;
+    private javax.swing.JList<String> jlistRep;
     private javax.swing.JTextField nomBD1;
     private javax.swing.JTextField nomBD2;
     private javax.swing.JTextField nomInst1;
