@@ -20,6 +20,7 @@ public class FrameConexion extends javax.swing.JFrame {
             userOrigen = "", userDestino = "",
             passOrigen = "", passDestino = "";
     boolean conexion1 = false, conexion2 = true;
+    int idBitacora = 0;
     DefaultListModel modelDisp = new DefaultListModel(),
                     modelRep = new DefaultListModel();
     
@@ -243,15 +244,11 @@ public class FrameConexion extends javax.swing.JFrame {
         try {
             Class.forName("org.postgresql.Driver");
             connPostgreSQL = DriverManager.getConnection(url, user, pass);
-            JOptionPane.showMessageDialog(this, "Conexion exitosa\n");
+            JOptionPane.showMessageDialog(this, "Conexion exitosa");
             conexion1 = true;
-            // Aquí puedes ejecutar tus consultas o realizar otras operaciones en la base de datos
-//            connPostgreSQL.close();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException ex) {
-            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
         }
+        catch (ClassNotFoundException e) { e.printStackTrace(); }
+        catch (SQLException e) { e.printStackTrace(); }
     }//GEN-LAST:event_btnProbar1ActionPerformed
 
     private void btnProbar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar2ActionPerformed
@@ -265,15 +262,11 @@ public class FrameConexion extends javax.swing.JFrame {
         try {
             Class.forName("oracle.jdbc.driver.OracleDriver");
             connOracle = DriverManager.getConnection(url, user, pass);
-            System.out.println("Conexión exitosa");
+            JOptionPane.showMessageDialog(this, "Conexion exitosa");
             conexion2 = true;
-            // Aquí puedes ejecutar tus consultas o realizar otras operaciones en la base de datos
-//            connOracle.close();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
+        catch (ClassNotFoundException e) { e.printStackTrace(); }
+        catch (SQLException e) { e.printStackTrace(); }
     }//GEN-LAST:event_btnProbar2ActionPerformed
     
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
@@ -281,12 +274,20 @@ public class FrameConexion extends javax.swing.JFrame {
             modelDisp = new DefaultListModel();
             modelRep = new DefaultListModel();
             
+            // Crear log table en la BD origen
+            String queryLogTable = "DROP TABLE IF EXISTS bitacora; " +
+                                    "CREATE TABLE bitacora (" +
+                                    "id serial PRIMARY KEY, " +
+                                    "fecha timestamp, " +
+                                    "accion varchar(2000), " +
+                                    "deshacer varchar(2000));";
+            
             // Actualizar la lista de tablas disponibles para replicacion
             
             // Consulta para obtener los nombres de las tablas origen
-            String query = "SELECT table_name"
-                    + " FROM information_schema.tables"
-                    + " WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
+            String query = "SELECT table_name " +
+                        "FROM information_schema.tables " +
+                        "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
             try {
                 // Ejecutar la consulta
                 PreparedStatement statement = connPostgreSQL.prepareStatement(query);
@@ -328,29 +329,21 @@ public class FrameConexion extends javax.swing.JFrame {
 
     private void btnRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRepActionPerformed
         if (jlistDisp.getSelectedIndex() >= 0) {
-//            modelDisp = (DefaultListModel) jlistDisp.getModel();
-//            modelRep = (DefaultListModel) jlistRep.getModel();
-            if (!modelRep.contains(modelDisp.elementAt(jlistDisp.getSelectedIndex()))) {
-                modelRep.addElement(modelDisp.elementAt(jlistDisp.getSelectedIndex()));
-            }
-            else {
-                JOptionPane.showMessageDialog(this, "La tabla ya fue agregada.");
-            }
+            // Agregar una tabla de la BD origen a la lista de tablas a replicar
+            modelRep.addElement(modelDisp.elementAt(jlistDisp.getSelectedIndex()));
+            modelDisp.remove(jlistDisp.getSelectedIndex());
         }
-        else{
-            JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla.");
-        }
+        else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnRepActionPerformed
 
     private void btnNoRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNoRepActionPerformed
         if (jlistRep.getSelectedIndex() >= 0) {
-            modelRep = (DefaultListModel) jlistRep.getModel();
-            modelDisp = (DefaultListModel) jlistDisp.getModel();
+            // Quitar una tabla de la lista de tablas a replicar
+            modelDisp.addElement(modelRep.elementAt(jlistRep.getSelectedIndex()));
             modelRep.remove(jlistRep.getSelectedIndex());
+            
         }
-        else{
-            JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla.");
-        }
+        else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnNoRepActionPerformed
 
     
