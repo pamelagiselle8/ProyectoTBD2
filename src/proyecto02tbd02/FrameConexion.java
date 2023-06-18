@@ -1,6 +1,5 @@
 package proyecto02tbd02;
 
-import java.beans.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -11,7 +10,6 @@ import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 
-
 public class FrameConexion extends javax.swing.JFrame {
     Connection connPostgreSQL = null;
     Connection connOracle = null;
@@ -19,7 +17,7 @@ public class FrameConexion extends javax.swing.JFrame {
             portOrigen = "", portDestino = "",
             userOrigen = "", userDestino = "",
             passOrigen = "", passDestino = "";
-    boolean conexion1 = false, conexion2 = true;
+    boolean conexion1 = false, conexion2 = false;
     int idBitacora = 0;
     DefaultListModel modelDisp = new DefaultListModel(),
                     modelRep = new DefaultListModel();
@@ -43,12 +41,12 @@ public class FrameConexion extends javax.swing.JFrame {
                         "WHERE table_type = 'BASE TABLE' AND table_schema = 'public'";
             try {
                 // Ejecutar la consulta
-                PreparedStatement statement = connPostgreSQL.prepareStatement(query);
-                ResultSet resultSet = statement.executeQuery();
-
+                Statement stmt = connPostgreSQL.createStatement();
+                ResultSet rs = stmt.executeQuery(query);
+                
                 // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
-                while (resultSet.next()) {
-                    String tableName = resultSet.getString("table_name");
+                while (rs.next()) {
+                    String tableName = rs.getString("table_name");
                     modelDisp.addElement(tableName);
                 }
 
@@ -81,7 +79,6 @@ public class FrameConexion extends javax.swing.JFrame {
         jlistRep = new javax.swing.JList<>();
         btnRegresar = new javax.swing.JButton();
         btnCancelarRep = new javax.swing.JButton();
-        jFrame1 = new javax.swing.JFrame();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
@@ -96,7 +93,7 @@ public class FrameConexion extends javax.swing.JFrame {
         btnGuardar = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
-        btnProbar2 = new javax.swing.JButton();
+        btnProbarConnOracle = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
         jLabel10 = new javax.swing.JLabel();
@@ -108,7 +105,7 @@ public class FrameConexion extends javax.swing.JFrame {
         puerto2 = new javax.swing.JTextField();
         nomBD2 = new javax.swing.JTextField();
         nomInst2 = new javax.swing.JTextField();
-        btnProbar1 = new javax.swing.JButton();
+        btnProbarConnPostgres = new javax.swing.JButton();
 
         FrameReplicacion.setResizable(false);
         FrameReplicacion.setSize(new java.awt.Dimension(670, 520));
@@ -230,13 +227,13 @@ public class FrameConexion extends javax.swing.JFrame {
         jLabel1.setText("Configuración de Bases de Datos");
         jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 50, -1, -1));
 
-        btnProbar2.setText("Probar conexion");
-        btnProbar2.addActionListener(new java.awt.event.ActionListener() {
+        btnProbarConnOracle.setText("Probar conexion");
+        btnProbarConnOracle.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnProbar2ActionPerformed(evt);
+                btnProbarConnOracleActionPerformed(evt);
             }
         });
-        jPanel1.add(btnProbar2, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 650, 180, -1));
+        jPanel1.add(btnProbarConnOracle, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 650, 180, -1));
 
         jLabel2.setFont(new java.awt.Font("Helvetica Neue", 0, 14)); // NOI18N
         jLabel2.setText("Base de Datos Destino");
@@ -262,64 +259,79 @@ public class FrameConexion extends javax.swing.JFrame {
         jPanel1.add(nomBD2, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 490, 180, -1));
         jPanel1.add(nomInst2, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 450, 180, -1));
 
-        btnProbar1.setText("Probar conexion");
-        btnProbar1.addActionListener(new java.awt.event.ActionListener() {
+        btnProbarConnPostgres.setText("Probar conexion");
+        btnProbarConnPostgres.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnProbar1ActionPerformed(evt);
+                btnProbarConnPostgresActionPerformed(evt);
             }
         });
-        jPanel1.add(btnProbar1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 350, 180, -1));
+        jPanel1.add(btnProbarConnPostgres, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 350, 180, -1));
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 570, 810));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnProbar1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar1ActionPerformed
+    private void btnProbarConnPostgresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbarConnPostgresActionPerformed
         connPostgreSQL = null;
-        String nomBD = nomBD1.getText();
-        String puerto = (puerto1.getText().isEmpty() ? "5432" : puerto1.getText());
-        String url = "jdbc:postgresql://localhost:" + puerto + "/" + nomBD;
-        String user = (user1.getText().isEmpty() ? "postgres" : user1.getText());
-        String pass = pass1.getText();
-
+        String dbServer = "postgresql-132239-0.cloudclusters.net"; // change it to your database server name 
+        int dbPort = (puerto1.getText().isEmpty() ? 10114 : Integer.parseInt(puerto1.getText()));
+        String dbName = (nomInst1.getText().isEmpty() ? "DBOrigen" : nomInst1.getText());
+        String userName = (user1.getText().isEmpty() ? "admin" : user1.getText());
+        String password = (pass1.getText().isEmpty() ? "Vacasvoladoras1" : pass1.getText());
+        String url = String.format("jdbc:postgresql://172.106.0.58:"+dbPort+"/"+dbName+"?user="+userName+"&password="+password, 
+                                        dbServer, dbPort, dbName, userName, password);
         try {
-            Class.forName("org.postgresql.Driver");
-            connPostgreSQL = DriverManager.getConnection(url, user, pass);
-            JOptionPane.showMessageDialog(this, "Conexion exitosa");
-            conexion1 = true;
+            connPostgreSQL = DriverManager.getConnection(url);
+            conexion1 = connPostgreSQL != null;// !connPostgreSQL.isClosed();
+            if (conexion1)
+                JOptionPane.showMessageDialog(this, "Conexion a PostgreSQL exitosa");
+            
+        } catch (SQLException e) {
+            System.out.println("PostgreSQL connection had an exception");
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        catch (ClassNotFoundException e) { e.printStackTrace(); }
-        catch (SQLException e) { e.printStackTrace(); }
-    }//GEN-LAST:event_btnProbar1ActionPerformed
+    }//GEN-LAST:event_btnProbarConnPostgresActionPerformed
 
-    private void btnProbar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbar2ActionPerformed
+    private void btnProbarConnOracleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProbarConnOracleActionPerformed
         connOracle = null;
-        String nomBD = nomBD2.getText();
-        String puerto = (puerto1.getText().isEmpty() ? "1521" : puerto1.getText());
-        String url = "jdbc:oracle:thin:@localhost:" + puerto + ":xe";
-        String user = (user2.getText().isEmpty() ? "SYSTEM" : user2.getText());
-        String pass = pass2.getText();
-
+        String dbServer = "oracle-132230-0.cloudclusters.net"; // change it to your database server name 
+        int dbPort = (puerto1.getText().isEmpty() ? 19324 : Integer.parseInt(puerto1.getText()));
+        String userName = (user2.getText().isEmpty() ? "admin" : user2.getText());
+        String password = (pass2.getText().isEmpty() ? "Vacasvoladoras1" : pass2.getText());
+        String url = String.format("jdbc:oracle:thin:@172.106.0.56:"+dbPort+":xe", dbServer, dbPort);
         try {
-            Class.forName("oracle.jdbc.driver.OracleDriver");
-            connOracle = DriverManager.getConnection(url, user, pass);
-            JOptionPane.showMessageDialog(this, "Conexion exitosa");
-            conexion2 = true;
+            Class.forName("oracle.jdbc.driver.OracleDriver");  
+            connOracle = DriverManager.getConnection(url, userName, password);
+            conexion2 = connOracle != null; // true;
+            if (conexion2)
+                JOptionPane.showMessageDialog(this, "Conexion a Oracle exitosa");
+            
+        } catch (SQLException e) {
+            System.out.println("Oracle Server connection had an exception");
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        catch (ClassNotFoundException e) { e.printStackTrace(); }
-        catch (SQLException e) { e.printStackTrace(); }
-    }//GEN-LAST:event_btnProbar2ActionPerformed
+    }//GEN-LAST:event_btnProbarConnOracleActionPerformed
     
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
         if (conexion1 && conexion2) {
             // Crear log table en la BD origen
-            String queryLogTable =  "DROP TABLE IF EXISTS bitacora; " +
-                                    "CREATE TABLE bitacora (" +
-                                    "id serial PRIMARY KEY, " +
-                                    "fecha timestamp, " +
-                                    "accion varchar(2000), " +
-                                    "deshacer varchar(2000));";
+            try {
+                Statement stmt = connPostgreSQL.createStatement();
+                String queryLogTable =  "DROP TABLE IF EXISTS bitacora; " +
+                                        "CREATE TABLE bitacora (" +
+                                        "id serial PRIMARY KEY, " +
+                                        "fecha timestamp, " +
+                                        "accion varchar(2000), " +
+                                        "deshacer varchar(2000));";
+                stmt.executeUpdate(queryLogTable);
+            } catch (SQLException ex) {
+                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+            }
             // Cargar la lista de tablas disponibles para replicacion
             cargarListas();
             FrameReplicacion.setVisible(true);
@@ -336,7 +348,7 @@ public class FrameConexion extends javax.swing.JFrame {
         try {
             conexion1 = false;
             conexion2 = false;
-//            connOracle.close();
+            connOracle.close();
             connPostgreSQL.close();
         } catch (SQLException ex) {
             Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
@@ -411,11 +423,10 @@ public class FrameConexion extends javax.swing.JFrame {
     private javax.swing.JButton btnGuardar;
     private javax.swing.JButton btnGuardarRep;
     private javax.swing.JButton btnNoRep;
-    private javax.swing.JButton btnProbar1;
-    private javax.swing.JButton btnProbar2;
+    private javax.swing.JButton btnProbarConnOracle;
+    private javax.swing.JButton btnProbarConnPostgres;
     private javax.swing.JButton btnRegresar;
     private javax.swing.JButton btnRep;
-    private javax.swing.JFrame jFrame1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
