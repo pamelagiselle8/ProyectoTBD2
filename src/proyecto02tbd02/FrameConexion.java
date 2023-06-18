@@ -47,7 +47,8 @@ public class FrameConexion extends javax.swing.JFrame {
                 // Agregar los nombres de las tablas a la lista de tablas disponibles para replicacion
                 while (rs.next()) {
                     String tableName = rs.getString("table_name");
-                    modelDisp.addElement(tableName);
+                    if (!tableName.equalsIgnoreCase("bitacora"))
+                        modelDisp.addElement(tableName);
                 }
 
             } catch (SQLException ex) {
@@ -326,8 +327,7 @@ public class FrameConexion extends javax.swing.JFrame {
                                         "CREATE TABLE bitacora (" +
                                         "id serial PRIMARY KEY, " +
                                         "fecha timestamp, " +
-                                        "accion varchar(2000), " +
-                                        "deshacer varchar(2000));";
+                                        "accion varchar(2000));";
                 stmt.executeUpdate(queryLogTable);
             } catch (SQLException ex) {
                 Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
