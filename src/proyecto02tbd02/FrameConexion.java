@@ -28,6 +28,8 @@ public class FrameConexion extends javax.swing.JFrame {
         this.setLocationRelativeTo(null);
         FrameReplicacion.setLocationRelativeTo(this);
         FrameReplicacion.setSize(622, 483);
+        this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        FrameReplicacion.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
     }
     
     // Actualizar la lista de tablas disponibles para replicacion
@@ -107,7 +109,6 @@ public class FrameConexion extends javax.swing.JFrame {
         nomBD1 = new javax.swing.JTextField();
         puerto1 = new javax.swing.JTextField();
         user1 = new javax.swing.JTextField();
-        btnGuardar = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         btnProbarConnOracle = new javax.swing.JButton();
@@ -123,6 +124,8 @@ public class FrameConexion extends javax.swing.JFrame {
         nomBD2 = new javax.swing.JTextField();
         nomInst2 = new javax.swing.JTextField();
         btnProbarConnPostgres = new javax.swing.JButton();
+        btnSalir = new javax.swing.JButton();
+        btnGuardar = new javax.swing.JButton();
 
         FrameReplicacion.setResizable(false);
         FrameReplicacion.setSize(new java.awt.Dimension(670, 520));
@@ -233,14 +236,6 @@ public class FrameConexion extends javax.swing.JFrame {
         getContentPane().add(puerto1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 230, 180, -1));
         getContentPane().add(user1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 270, 180, -1));
 
-        btnGuardar.setText("Guardar");
-        btnGuardar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnGuardarActionPerformed(evt);
-            }
-        });
-        getContentPane().add(btnGuardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 723, 140, 30));
-
         jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel1.setFont(new java.awt.Font("Helvetica Neue", 1, 18)); // NOI18N
@@ -287,7 +282,23 @@ public class FrameConexion extends javax.swing.JFrame {
         });
         jPanel1.add(btnProbarConnPostgres, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 350, 180, -1));
 
-        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 570, 810));
+        btnSalir.setText("Desconectar y salir");
+        btnSalir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSalirActionPerformed(evt);
+            }
+        });
+        jPanel1.add(btnSalir, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 810, -1, 40));
+
+        btnGuardar.setText("Guardar");
+        btnGuardar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGuardarActionPerformed(evt);
+            }
+        });
+        jPanel1.add(btnGuardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 720, 140, 30));
+
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 580, 880));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -404,106 +415,16 @@ public class FrameConexion extends javax.swing.JFrame {
         if (jlistDisp.getSelectedIndex() >= 0) {
             // Agregar una tabla de la BD origen a la lista de tablas a replicar
             String tablaReplicar = modelDisp.elementAt(jlistDisp.getSelectedIndex()).toString();
+            // Cambios en el GUI
             modelRep.addElement(tablaReplicar);
             modelDisp.remove(jlistDisp.getSelectedIndex());
             
-            try {
-                Statement stmt = connPostgreSQL.createStatement();
-
-                // Obtener los nombres de las columnas de la tabla y guardarlas en un ArrayList
-                String queryColumnas = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tablaReplicar + "' ORDER BY ordinal_position";
-                ResultSet columnResultSet = stmt.executeQuery(queryColumnas);
-                ArrayList<String> columnas = new ArrayList();
-
-                while (columnResultSet.next()) {
-                    columnas.add(columnResultSet.getString("column_name"));
-                }
-
-                stmt = connPostgreSQL.createStatement();
-
-                // Delimitar los nombres de las columnas con comas
-                String columnasDelim = String.join(", ", columnas);
-                
-                
-                // QUERIES TRIGGER INSERT
-                
-                // Inserción del nuevo registro en la tabla bitacoraOrigen
-                String insertTriggerQuery = "CREATE OR REPLACE FUNCTION insertar_bitacora() RETURNS TRIGGER AS $$ " +
-                        "DECLARE " +
-                        "valores TEXT; " +
-                        "BEGIN " +
-                        "valores := ";
-
-                // Obtener los valores de la inserción más reciente en la tabla
-                for (int i = 0; i < columnas.size()-1; i++) {
-                    insertTriggerQuery += "NEW." + columnas.get(i) + "::text || ', ' || ";
-                }
-                insertTriggerQuery += "NEW." + columnas.get(columnas.size()-1) + "::text; " +
-                        "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) " +
-                        "VALUES ( " +
-                        "'INSERT', " +
-                        "'" + tablaReplicar + "', " +
-                        "'" + columnasDelim + "', " +
-                        "valores, " +
-                        "CURRENT_TIMESTAMP); " +
-                        "RETURN NEW; " +
-                        "END; " +
-                        "$$ LANGUAGE plpgsql;";
-                stmt.execute(insertTriggerQuery);
-
-                connPostgreSQL.createStatement();
-                
-                // Crear el trigger de insert
-                String createTriggerQuery = "CREATE TRIGGER InsertTriggerBitacora " +
-                        "AFTER INSERT ON " + tablaReplicar + " " +
-                        "FOR EACH ROW " +
-                        "EXECUTE FUNCTION insertar_bitacora();";
-                stmt.execute(createTriggerQuery);
-                System.out.println("trigger insert creado");
-                
-                
-                
-                // QUERIES TRIGGER UPDATE
-                
-                // Inserción del nuevo registro en la tabla bitacoraOrigen
-                String updateTriggerQuery = "CREATE OR REPLACE FUNCTION actualizar_bitacora() RETURNS TRIGGER AS $$ " +
-                        "DECLARE " +
-                        "valores TEXT; " +
-                        "BEGIN " +
-                        "valores := ";
-
-                // Obtener los valores de la última actualización en la tabla
-                for (int i = 0; i < columnas.size() - 1; i++) {
-                    updateTriggerQuery += "NEW." + columnas.get(i) + "::text || ', ' || ";
-                }
-                updateTriggerQuery += "NEW." + columnas.get(columnas.size() - 1) + "::text; " +
-                        "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) " +
-                        "VALUES (" +
-                        "'UPDATE', " +
-                        "'" + tablaReplicar + "', " +
-                        "'" + columnasDelim + "', " +
-                        "valores, " +
-                        "CURRENT_TIMESTAMP); " +
-                        "RETURN NEW; " +
-                        "END; " +
-                        "$$ LANGUAGE plpgsql;";
-                stmt.execute(updateTriggerQuery);
-
-                connPostgreSQL.createStatement();
-                
-                // Crear el trigger de update
-                createTriggerQuery = "CREATE TRIGGER UpdateTriggerBitacora " +
-                        "AFTER UPDATE ON " + tablaReplicar + " " +
-                        "FOR EACH ROW " +
-                        "EXECUTE FUNCTION actualizar_bitacora();";
-                stmt.execute(createTriggerQuery);
-                System.out.println("trigger update creado");
-                
-            } catch (SQLException ex) {
-                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            
-
+            // Crear trigger de insert
+            crearTriggerInsert(tablaReplicar);
+            // Crear trigger de update
+            crearTriggerUpdate(tablaReplicar);
+            // Crear trigger de delete
+//            crearTriggerDelete(tablaReplicar);
         }
         else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnRepActionPerformed
@@ -512,15 +433,14 @@ public class FrameConexion extends javax.swing.JFrame {
         if (jlistRep.getSelectedIndex() >= 0) {
             // Quitar una tabla de la lista de tablas a replicar
             String tablaReplicar = modelRep.elementAt(jlistRep.getSelectedIndex()).toString();
+            // Cambios en el GUI
             modelDisp.addElement(modelRep.elementAt(jlistRep.getSelectedIndex()));
             modelRep.remove(jlistRep.getSelectedIndex());
             
-            // Borrar trigger de insert
+            // Borrar triggers
             borrarTrigger(tablaReplicar, "InsertTriggerBitacora");
-            // Borrar trigger de update
             borrarTrigger(tablaReplicar, "UpdateTriggerBitacora");
-            // Borrar trigger de delete
-//            borrarTrigger(tablaReplicar, "DeleteTriggerBitacora");
+            borrarTrigger(tablaReplicar, "DeleteTriggerBitacora");
         }
         else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnNoRepActionPerformed
@@ -535,14 +455,31 @@ public class FrameConexion extends javax.swing.JFrame {
             // Borrar triggers
             for (int i = 0; i < modelRep.getSize(); i++) {
                 borrarTrigger(modelRep.get(i).toString(), "InsertTriggerBitacora");
-                // borrar trigger update
-                // borrar trigger delete
+                borrarTrigger(modelRep.get(i).toString(), "UpdateTriggerBitacora");
+                borrarTrigger(modelRep.get(i).toString(), "DeleteTriggerBitacora");
             }
-
+            
             // Descartar cambios en GUI
             cargarListas();
         }
     }//GEN-LAST:event_btnCancelarRepActionPerformed
+
+    private void btnSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSalirActionPerformed
+        try {
+            // Cerrar las conexión a Oracle
+            if (connOracle != null)
+                if (!connOracle.isClosed())
+                    connOracle.close();
+            // Cerrar las conexión a PostgreSQL
+            if (connPostgreSQL != null)
+                if (!connPostgreSQL.isClosed())
+                    connPostgreSQL.close();
+            // Cerrar el programa
+            System.exit(0);
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_btnSalirActionPerformed
 
     
     public static void main(String args[]) {
@@ -579,15 +516,154 @@ public class FrameConexion extends javax.swing.JFrame {
     }
     
     public void crearTriggerInsert(String tablaReplicar) {
-        
+        try {
+            Statement stmt = connPostgreSQL.createStatement();
+            // Obtener los nombres de las columnas de la tabla y guardarlas en un ArrayList
+            String queryColumnas = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tablaReplicar + "' ORDER BY ordinal_position";
+            ResultSet columnResultSet = stmt.executeQuery(queryColumnas);
+            ArrayList<String> columnas = new ArrayList();
+
+            while (columnResultSet.next()) {
+                columnas.add(columnResultSet.getString("column_name"));
+            }
+
+            stmt = connPostgreSQL.createStatement();
+
+            // Delimitar los nombres de las columnas con comas
+            String columnasDelim = String.join(", ", columnas);
+
+            // Inserción del nuevo registro en la tabla bitacoraOrigen
+            String insertTriggerQuery = "CREATE OR REPLACE FUNCTION insertar_bitacora() RETURNS TRIGGER AS $$ " +
+                    "DECLARE " +
+                    "valores TEXT; " +
+                    "BEGIN " +
+                    "valores := ";
+
+            // Obtener los valores de la inserción más reciente en la tabla
+            for (int i = 0; i < columnas.size()-1; i++) {
+                insertTriggerQuery += "NEW." + columnas.get(i) + "::text || ', ' || ";
+            }
+            insertTriggerQuery += "NEW." + columnas.get(columnas.size()-1) + "::text; " +
+                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) " +
+                    "VALUES ( " +
+                    "'INSERT', " +
+                    "'" + tablaReplicar + "', " +
+                    "'" + columnasDelim + "', " +
+                    "valores, " +
+                    "CURRENT_TIMESTAMP); " +
+                    "RETURN NEW; " +
+                    "END; " +
+                    "$$ LANGUAGE plpgsql;";
+            stmt.execute(insertTriggerQuery);
+
+            connPostgreSQL.createStatement();
+
+            // Crear el trigger de insert
+            String createTriggerQuery = "CREATE TRIGGER InsertTriggerBitacora " +
+                    "AFTER INSERT ON " + tablaReplicar + " " +
+                    "FOR EACH ROW " +
+                    "EXECUTE FUNCTION insertar_bitacora();";
+            stmt.execute(createTriggerQuery);
+            System.out.println("trigger insert creado");
+            
+            stmt.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     public void crearTriggerUpdate(String tablaReplicar) {
-        
+        try {
+            Statement stmt = connPostgreSQL.createStatement();
+            // Obtener los nombres de las columnas de la tabla y guardarlas en un ArrayList
+            String queryColumnas = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tablaReplicar + "' ORDER BY ordinal_position";
+            ResultSet columnResultSet = stmt.executeQuery(queryColumnas);
+            ArrayList<String> columnas = new ArrayList();
+
+            while (columnResultSet.next()) {
+                columnas.add(columnResultSet.getString("column_name"));
+            }
+
+            stmt = connPostgreSQL.createStatement();
+
+            // Delimitar los nombres de las columnas con comas
+            String columnasDelim = String.join(", ", columnas);
+                
+            // Inserción del nuevo registro en la tabla bitacoraOrigen
+            String updateTriggerQuery = "CREATE OR REPLACE FUNCTION actualizar_bitacora() RETURNS TRIGGER AS $$ " +
+                    "DECLARE " +
+                    "valores TEXT; " +
+                    "BEGIN " +
+                    "valores := ";
+
+            // Obtener los valores de la última actualización en la tabla
+            for (int i = 0; i < columnas.size() - 1; i++) {
+                updateTriggerQuery += "NEW." + columnas.get(i) + "::text || ', ' || ";
+            }
+            updateTriggerQuery += "NEW." + columnas.get(columnas.size() - 1) + "::text; " +
+                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) " +
+                    "VALUES (" +
+                    "'UPDATE', " +
+                    "'" + tablaReplicar + "', " +
+                    "'" + columnasDelim + "', " +
+                    "valores, " +
+                    "CURRENT_TIMESTAMP); " +
+                    "RETURN NEW; " +
+                    "END; " +
+                    "$$ LANGUAGE plpgsql;";
+            stmt.execute(updateTriggerQuery);
+
+            connPostgreSQL.createStatement();
+
+            // Crear el trigger de update
+            String createTriggerQuery = "CREATE TRIGGER UpdateTriggerBitacora " +
+                    "AFTER UPDATE ON " + tablaReplicar + " " +
+                    "FOR EACH ROW " +
+                    "EXECUTE FUNCTION actualizar_bitacora();";
+            stmt.execute(createTriggerQuery);
+            System.out.println("trigger update creado");
+            
+            stmt.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     public void crearTriggerDelete(String tablaReplicar) {
-        
+        Statement stmt;
+        try {
+            stmt = connPostgreSQL.createStatement();
+            // Tabla a eliminar registros
+            String tableName = "empleados";
+
+            // Crear el trigger de AFTER DELETE en la tabla deseada
+            String deleteTriggerQuery = "CREATE OR REPLACE FUNCTION borrar_bitacora() RETURNS TRIGGER AS $$ " +
+                    "BEGIN " +
+                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) " +
+                    "VALUES ( " +
+                    "'DELETE', " +
+                    "'" + tableName + "', " +
+                    "'', " +
+                    "'', " +
+                    "CURRENT_TIMESTAMP); " +
+                    "RETURN OLD; " +
+                    "END; " +
+                    "$$ LANGUAGE plpgsql;";
+
+            stmt.execute(deleteTriggerQuery);
+
+            // Asociar el trigger de AFTER DELETE a la tabla
+            String createTriggerQuery = "CREATE TRIGGER DeleteTriggerBitacora " +
+                    "AFTER DELETE ON " + tableName + " " +
+                    "FOR EACH ROW " +
+                    "EXECUTE FUNCTION borrar_bitacora();";
+            stmt.execute(createTriggerQuery);
+            System.out.println("trigger delete creado");
+
+            stmt.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -600,6 +676,7 @@ public class FrameConexion extends javax.swing.JFrame {
     private javax.swing.JButton btnProbarConnPostgres;
     private javax.swing.JButton btnRegresar;
     private javax.swing.JButton btnRep;
+    private javax.swing.JButton btnSalir;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
