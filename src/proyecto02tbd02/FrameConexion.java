@@ -396,33 +396,6 @@ public class FrameConexion extends javax.swing.JFrame {
             
             try {
                 
-                Statement stmt = connPostgreSQL.createStatement();
-                String tableName = tablaReplicar;
-
-                // Obtener las columnas de la tabla y construir el texto con los nombres de las columnas
-                String queryColumnas = "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "'";
-                ResultSet columnResultSet = stmt.executeQuery(queryColumnas);
-                ArrayList columnas = new ArrayList();
-                
-                while (columnResultSet.next()) {
-                    columnas.add(columnResultSet.getString("column_name"));
-                }
-                
-                // Obtener los últimos valores insertados en cada campo (última tupla de la tabla)
-                ArrayList valores = new ArrayList();
-                
-                for (int i = 0; i < columnas.size(); i++) {
-                    // Ejecutar el query para obtener el valor de cada campo
-                    String columna = (String)columnas.get(i).toString(),
-                            queryValores = "SELECT " + columna + " FROM " + tableName + " ORDER BY id DESC LIMIT 1;";
-                    ResultSet valoresResultSet = stmt.executeQuery(queryValores);
-                    
-                    // Guardar el valor de cada columna
-                    if (valoresResultSet.next())
-                        valores.add((valoresResultSet.getObject((String)columnas.get(i))).toString());
-                
-                }
-
                 
                 
                 
@@ -433,12 +406,74 @@ public class FrameConexion extends javax.swing.JFrame {
 //                                            "AFTER INSERT ON tablaRep \n" +
 //                                            "BEGIN \n" +
 //                                            "\tINSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora) \n" +
-//                                            "\tVALUES ('INSERT', '" + tablaReplicar + "', '" + columnNames.toString() + "', '" + valueQuery.toString() + "', SYSDATE); \n" +
+//                                            "\tVALUES ('INSERT', '" + tablaReplicar + "', '" + columnasDelim + "', '" + valoresDelim + "', SYSDATE); \n" +
 //                                            "END; \n" +
 //                                            "/";
-//
-//                // Crear el trigger de INSERT en PostgreSQL
-//                stmt.executeUpdate(insertTriggerQuery);
+                Statement stmt = connPostgreSQL.createStatement();
+                
+                String insertTriggerQuery =
+//                                    "CREATE OR REPLACE TRIGGER triggerInsert\n" +
+//                                    "AFTER INSERT ON "+ tablaReplicar +" \n" +
+//                                    "DECLARE\n" +
+//                                    "    valores TEXT;\n" +
+//                                    "    columnas TEXT;\n" +
+//                                    "BEGIN\n" +
+//                        
+//                                    // Obtiene los valores de la última inserción en la tabla
+//                                    "    SELECT string_agg(NEW.columna::text, ', ')\n" +
+//                                    "    INTO valores\n" +
+//                                    "    FROM "+ tablaReplicar +"\n" +
+//                                    "    ORDER BY id DESC\n" +
+//                                    "    LIMIT 1;\n" +
+//                        
+//                                    // Obtiene todas las columnas de la tabla en orden
+//                                    "    SELECT string_agg(column_name, ', ')\n" +
+//                                    "    INTO columnas\n" +
+//                                    "    FROM information_schema.columns\n" +
+//                                    "    WHERE table_name = "+ tablaReplicar +"\n" +
+//                                    "    ORDER BY ordinal_position;\n" +
+//                        
+//                                    // Inserta los valores en la tabla bitacora
+//                                    "    INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora)\n" +
+//                                    "    VALUES ('INSERT', '"+ tablaReplicar +"', columnas, valores, SYSDATE);\n" +
+//                                    "END;\n" +
+//                                    "/";
+//                insertTriggerQuery =
+                        "CREATE OR REPLACE FUNCTION insertar_bitacora()\n" +
+                        "RETURNS TRIGGER AS $$\n" +
+                        "DECLARE\n" +
+                        "    valores TEXT;\n" +
+                        "    columnas TEXT;\n" +
+                        "BEGIN\n" +
+                        // "    -- Obtiene los valores de la última inserción en tablaRep\n" +
+                        "    SELECT string_agg(NEW.columna::text, ', ')\n" +
+                        "    INTO valores\n" +
+                        "    FROM "+ tablaReplicar +"\n" +
+                        "    ORDER BY id DESC\n" +
+                        "    LIMIT 1;\n" +
+                        "\n" +
+                        // "    -- Obtiene todas las columnas de tablaRep en orden\n" +
+                        "    SELECT string_agg(column_name, ', ')\n" +
+                        "    INTO columnas\n" +
+                        "    FROM information_schema.columns\n" +
+                        "    WHERE table_name = "+ tablaReplicar +"\n" +
+                        "    ORDER BY ordinal_position;\n" +
+                        "\n" +
+                        // "    -- Inserta los valores en la tabla bitacoraOrigen\n" +
+                        "    INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora)\n" +
+                        "    VALUES ('INSERT', '"+ tablaReplicar +"', columnas, valores, current_timestamp);\n" +
+                        "\n" +
+                        "    RETURN NEW;\n" +
+                        "END;\n" +
+                        "$$ LANGUAGE plpgsql;" +
+                        
+                        "CREATE TRIGGER trigger_insert_bitacora\n" +
+                        "AFTER INSERT ON "+ tablaReplicar +"\n" +
+                        "FOR EACH ROW\n" +
+                        "EXECUTE FUNCTION insertar_bitacora();";
+                
+                // Crear el trigger de INSERT en PostgreSQL
+                stmt.executeUpdate(insertTriggerQuery);
 
 
                 
