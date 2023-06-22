@@ -4,7 +4,6 @@
   <NonVisualComponents>
     <Container class="javax.swing.JFrame" name="FrameReplicacion">
       <Properties>
-        <Property name="resizable" type="boolean" value="false"/>
         <Property name="size" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
           <Dimension value="[670, 520]"/>
         </Property>
@@ -206,7 +205,6 @@
   </NonVisualComponents>
   <Properties>
     <Property name="defaultCloseOperation" type="int" value="3"/>
-    <Property name="resizable" type="boolean" value="false"/>
   </Properties>
   <SyntheticProperties>
     <SyntheticProperty name="formSizePolicy" type="int" value="1"/>
