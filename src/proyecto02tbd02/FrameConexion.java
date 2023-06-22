@@ -373,10 +373,10 @@ public class FrameConexion extends javax.swing.JFrame {
                                 "END; " +
                                 "BEGIN " +
                                 "EXECUTE IMMEDIATE 'CREATE TABLE BITACORADESTINO (" +
-                                "operacion VARCHAR2(10), " +
+                                "operacion VARCHAR2(20), " +
                                 "tabla VARCHAR2(100), " +
-                                "columna VARCHAR2(100), " +
-                                "nuevo_valor VARCHAR2(100), " +
+                                "columna VARCHAR2(200), " +
+                                "nuevo_valor VARCHAR2(200), " +
                                 "fecha_hora TIMESTAMP)'; " +
                                 "EXCEPTION WHEN OTHERS THEN NULL; " +
                                 "END; " +
@@ -483,8 +483,8 @@ public class FrameConexion extends javax.swing.JFrame {
     }//GEN-LAST:event_btnRepActionPerformed
 
     private void btnNoRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNoRepActionPerformed
+        // Quitar una tabla de la lista de tablas a replicar
         if (jlistRep.getSelectedIndex() >= 0) {
-            // Quitar una tabla de la lista de tablas a replicar
             String tablaReplicar = modelRep.elementAt(jlistRep.getSelectedIndex()).toString();
             // Cambios en el GUI
             modelDisp.addElement(modelRep.elementAt(jlistRep.getSelectedIndex()));
@@ -499,7 +499,66 @@ public class FrameConexion extends javax.swing.JFrame {
     }//GEN-LAST:event_btnNoRepActionPerformed
 
     private void btnGuardarRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarRepActionPerformed
-        // Ejecutar el job de replicacion en la BD destino
+        try {
+            // Copiar registros de bitacoraOrigen (PostgreSQL) a bitacoraDestino (Oracle)
+            Statement stmtPostgres = connPostgreSQL.createStatement();
+            ResultSet rsDataPostgres = stmtPostgres.executeQuery("SELECT * FROM bitacoraOrigen");
+            
+            // Borrar datos (si hay) de tabla bitacoraDestino
+            Statement stmtOracle = connOracle.createStatement();
+            String sql = "DELETE FROM BITACORADESTINO";
+            stmtOracle.executeUpdate(sql);
+            System.out.println("hola");
+            
+            // Crear el query de insert en bitacoraDestino
+            while (rsDataPostgres.next()) {
+                // Obtener el valor de replicado
+                boolean replicado = rsDataPostgres.getBoolean("replicado");
+                System.out.println("bool " + replicado);
+                
+                // Si el cambio no ha sido replicado aun, se guarda en bitacoraDestino
+                if (!replicado) {
+                    String insertQuery =   "INSERT INTO BITACORADESTINO VALUES ('" + 
+                                    rsDataPostgres.getString("operacion") + "', '" +
+                                    rsDataPostgres.getString("tabla") + "', '" +
+                                    rsDataPostgres.getString("columna") + "', '" +
+                                    // Las fechas se guardan como NULL porque representan
+                                    // la fecha en que se replico la operacion
+                                    rsDataPostgres.getString("nuevo_valor") + "', NULL)";
+                    // Hacer el insert de la tupla en bitacoraDestino
+                    Statement stmtOracleInsert = connOracle.createStatement();
+                    stmtOracleInsert.execute(insertQuery);
+                    
+                    stmtOracle = connOracle.createStatement();
+                    String query = "SELECT * FROM bitacoraDestino";
+                    ResultSet rs = stmtOracle.executeQuery(query);
+
+                    while (rs.next()) {
+                        String operacion = rs.getString("operacion");
+                        String tabla = rs.getString("tabla");
+                        String columna = rs.getString("columna");
+                        String nuevoValor = rs.getString("nuevo_valor");
+                        Timestamp fechaHora = rs.getTimestamp("fecha_hora");
+
+                        System.out.println("Operación: " + operacion);
+                        System.out.println("Tabla: " + tabla);
+                        System.out.println("Columna: " + columna);
+                        System.out.println("Nuevo Valor: " + nuevoValor);
+                        System.out.println("Fecha y Hora: " + fechaHora);
+                        System.out.println("----------------------------------");
+                    }
+
+                }
+                
+            }
+            
+            
+            // Ejecutar el job de replicacion en la BD destino
+            
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
     }//GEN-LAST:event_btnGuardarRepActionPerformed
 
@@ -714,18 +773,36 @@ public class FrameConexion extends javax.swing.JFrame {
 
             // Crear el query para el trigger de delete
             String deleteTriggerQuery = "CREATE OR REPLACE FUNCTION borrar_bitacora() RETURNS TRIGGER AS $$ " +
-                    "BEGIN " +
-                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora, replicado) " +
-                    "VALUES ( " +
-                    "'DELETE FROM ', " +
-                    "'" + tablaReplicar + "', " +
-                    "'', " +
-                    "'', " +
-                    "CURRENT_TIMESTAMP, " +
-                    "FALSE); " +
-                    "RETURN OLD; " +
-                    "END; " +
-                    "$$ LANGUAGE plpgsql;";
+                                        "DECLARE " +
+                                        // Variable para guardar el id del registro eliminado
+                                        "deleted_id NUMBER; " +
+                                        "BEGIN " +
+                                        "deleted_id := OLD.id; " +
+                                        "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora, replicado) " +
+                                        "VALUES ( " +
+                                        "'DELETE FROM ', " +
+                                        "'" + tablaReplicar + "', " +
+                                        "'', " +
+                                        "OLD.*::text, " +
+                                        "CURRENT_TIMESTAMP, " +
+                                        "FALSE); " +
+                                        "RETURN OLD; " +
+                                        "END; " +
+                                        "$$ LANGUAGE plpgsql;";
+
+//            String deleteTriggerQuery = "CREATE OR REPLACE FUNCTION borrar_bitacora() RETURNS TRIGGER AS $$ " +
+//                    "BEGIN " +
+//                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora, replicado) " +
+//                    "VALUES ( " +
+//                    "'DELETE FROM ', " +
+//                    "'" + tablaReplicar + "', " +
+//                    "'', " +
+//                    "'', " +
+//                    "CURRENT_TIMESTAMP, " +
+//                    "FALSE); " +
+//                    "RETURN OLD; " +
+//                    "END; " +
+//                    "$$ LANGUAGE plpgsql;";
 
             stmt.execute(deleteTriggerQuery);
 
