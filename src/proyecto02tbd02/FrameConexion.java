@@ -528,30 +528,13 @@ public class FrameConexion extends javax.swing.JFrame {
                     // Hacer el insert de la tupla en bitacoraDestino
                     Statement stmtOracleInsert = connOracle.createStatement();
                     stmtOracleInsert.execute(insertQuery);
-                    
-                    stmtOracle = connOracle.createStatement();
-                    String query = "SELECT * FROM bitacoraDestino";
-                    ResultSet rs = stmtOracle.executeQuery(query);
-
-                    while (rs.next()) {
-                        String operacion = rs.getString("operacion");
-                        String tabla = rs.getString("tabla");
-                        String columna = rs.getString("columna");
-                        String nuevoValor = rs.getString("nuevo_valor");
-                        Timestamp fechaHora = rs.getTimestamp("fecha_hora");
-
-                        System.out.println("Operación: " + operacion);
-                        System.out.println("Tabla: " + tabla);
-                        System.out.println("Columna: " + columna);
-                        System.out.println("Nuevo Valor: " + nuevoValor);
-                        System.out.println("Fecha y Hora: " + fechaHora);
-                        System.out.println("----------------------------------");
-                    }
-
                 }
                 
             }
             
+            // Crear el procedure
+            
+            // Crear el job
             
             // Ejecutar el job de replicacion en la BD destino
             
@@ -640,6 +623,33 @@ public class FrameConexion extends javax.swing.JFrame {
                 new FrameConexion().setVisible(true);
             }
         });
+    }
+    
+    public void crearProcedure() {
+        
+    }
+    
+    private static String formatValues(String values) {
+        // Agregar los valores de cada columna
+//        for (int i = 1; i <= cantColumnas; i++) {
+//            if (i > 1) { insertQuery += ","; }
+//            // Obtener el tipo de dato
+//            int columnType = rsmd.getColumnType(i);
+//            // Si es un dato de tipo string le agrega comillas simples
+//            if (columnType == Types.VARCHAR || columnType == Types.CHAR
+//                    || columnType == Types.NVARCHAR || columnType == Types.NCHAR) {
+//                insertQuery += "'" + rsDataPostgres.getString(i) + "'";
+//            }
+//            // Si es una fecha le pone formato de fecha
+//            else if (columnType == Types.DATE) {
+//                insertQuery += "TO_DATE('"+rsDataPostgres.getString(i)+"', 'YYYY-MM-DD')";
+//            }
+//            else {
+//                insertQuery += rsDataPostgres.getString(i);
+//            }
+//        }
+        
+        return "";
     }
     
     public void crearTriggerInsert(String tablaReplicar) {
@@ -783,27 +793,12 @@ public class FrameConexion extends javax.swing.JFrame {
                                         "'DELETE FROM ', " +
                                         "'" + tablaReplicar + "', " +
                                         "'', " +
-                                        "OLD.*::text, " +
+                                        "deleted_id::TEXT, " +
                                         "CURRENT_TIMESTAMP, " +
                                         "FALSE); " +
                                         "RETURN OLD; " +
                                         "END; " +
                                         "$$ LANGUAGE plpgsql;";
-
-//            String deleteTriggerQuery = "CREATE OR REPLACE FUNCTION borrar_bitacora() RETURNS TRIGGER AS $$ " +
-//                    "BEGIN " +
-//                    "INSERT INTO bitacoraOrigen (operacion, tabla, columna, nuevo_valor, fecha_hora, replicado) " +
-//                    "VALUES ( " +
-//                    "'DELETE FROM ', " +
-//                    "'" + tablaReplicar + "', " +
-//                    "'', " +
-//                    "'', " +
-//                    "CURRENT_TIMESTAMP, " +
-//                    "FALSE); " +
-//                    "RETURN OLD; " +
-//                    "END; " +
-//                    "$$ LANGUAGE plpgsql;";
-
             stmt.execute(deleteTriggerQuery);
 
             // Borrar el trigger si es que ya existe para evitar un exception
