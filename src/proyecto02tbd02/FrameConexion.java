@@ -363,7 +363,6 @@ public class FrameConexion extends javax.swing.JFrame {
                                         "nuevo_valor TEXT, " +
                                         "fecha_hora TIMESTAMP, " +
                                         "replicado BOOLEAN);";
-
                  stmt.executeUpdate(queryLogTable);
 
                 stmt = connOracle.createStatement();
@@ -414,12 +413,18 @@ public class FrameConexion extends javax.swing.JFrame {
         // Agregar una tabla de la BD origen a la lista de tablas a replicar
         if (jlistDisp.getSelectedIndex() >= 0) {
             try {
-                //            try {
                 String tablaReplicar = modelDisp.elementAt(jlistDisp.getSelectedIndex()).toString();
                 // Cambios en el GUI
                 modelRep.addElement(tablaReplicar);
                 modelDisp.remove(jlistDisp.getSelectedIndex());
-
+                
+                // Descartar registros de cambios pasados
+                String sqlRep = "UPDATE bitacoraOrigen SET replicado = true "
+                        + "WHERE tabla = '"+ tablaReplicar +"'";
+                Statement stmt = connPostgreSQL.createStatement();
+                int rowCount = stmt.executeUpdate(sqlRep);
+                System.out.println("rowCOunt " + rowCount);
+                
                 // Crear trigger de insert
                 crearTriggerInsert(tablaReplicar);
                 // Crear trigger de update
