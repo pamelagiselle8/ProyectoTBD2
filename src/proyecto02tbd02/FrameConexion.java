@@ -286,7 +286,7 @@ public class FrameConexion extends javax.swing.JFrame {
                 btnSalirActionPerformed(evt);
             }
         });
-        jPanel1.add(btnSalir, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 810, -1, 40));
+        jPanel1.add(btnSalir, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 700, 180, 30));
 
         btnGuardar.setText("Guardar");
         btnGuardar.addActionListener(new java.awt.event.ActionListener() {
@@ -294,9 +294,9 @@ public class FrameConexion extends javax.swing.JFrame {
                 btnGuardarActionPerformed(evt);
             }
         });
-        jPanel1.add(btnGuardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 720, 140, 30));
+        jPanel1.add(btnGuardar, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 700, 180, 30));
 
-        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 580, 880));
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 580, 780));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -413,7 +413,8 @@ public class FrameConexion extends javax.swing.JFrame {
     private void btnRepActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRepActionPerformed
         // Agregar una tabla de la BD origen a la lista de tablas a replicar
         if (jlistDisp.getSelectedIndex() >= 0) {
-//            try {
+            try {
+                //            try {
                 String tablaReplicar = modelDisp.elementAt(jlistDisp.getSelectedIndex()).toString();
                 // Cambios en el GUI
                 modelRep.addElement(tablaReplicar);
@@ -425,43 +426,53 @@ public class FrameConexion extends javax.swing.JFrame {
                 crearTriggerUpdate(tablaReplicar);
                 // Crear trigger de delete
                 crearTriggerDelete(tablaReplicar);
-
                 
-                // Todavia en proceso:
+                // Borrar datos (por si hay) en tabla destino
+                Statement stmtOracle = connOracle.createStatement();
+                String sql = "DELETE FROM " + tablaReplicar;
+                stmtOracle.executeUpdate(sql);
+                
                 // Copiar version actual de la tabla en la BD destino
-//                Statement stmtPostgres = connPostgreSQL.createStatement();
-//                ResultSet rsDataPostgres = stmtPostgres.executeQuery("SELECT * FROM nombre_tabla_postgres");
-//                
-//                String insertQuery = "INSERT INTO nombre_tabla_oracle VALUES (";
-//                ResultSetMetaData rsmd = rsDataPostgres.getMetaData();
-//                int columnCount = rsmd.getColumnCount();
-//
-//                while (rsDataPostgres.next()) {
-//                    for (int i = 1; i <= columnCount; i++) {
-//                        if (i > 1) {
-//                            insertQuery += ",";
-//                        }
-//                        // Obtener el tipo de datos de la columna
-//                        int columnType = rsmd.getColumnType(i);
-//                        // Si es un valor de tipo string, agregar comillas simples alrededor del valor
-//                        if (columnType == Types.VARCHAR || columnType == Types.CHAR || columnType == Types.NVARCHAR || columnType == Types.NCHAR) {
-//                            insertQuery += "'" + rsDataPostgres.getString(i) + "'";
-//                        } else {
-//                            insertQuery += rsDataPostgres.getString(i);
-//                        }
-//                    }
-//                    insertQuery += ")";
-//
-//                    Statement stmtOracleInsert = connOracle.createStatement();
-//                    stmtOracleInsert.executeUpdate(insertQuery);
-//                }
+                Statement stmtPostgres = connPostgreSQL.createStatement();
+                ResultSet rsDataPostgres = stmtPostgres.executeQuery("SELECT * FROM " + tablaReplicar);
 
-//            }
-//            catch (SQLException ex) {
-//                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-            
+                String insertQuery = "";
+                ResultSetMetaData rsmd = rsDataPostgres.getMetaData();
+                int cantColumnas = rsmd.getColumnCount();
 
+                while (rsDataPostgres.next()) {
+                    // Crear el query de insert
+                    insertQuery = "INSERT INTO "+tablaReplicar+" VALUES (";
+                    
+                    // Agregar los valores de cada columna
+                    for (int i = 1; i <= cantColumnas; i++) {
+                        if (i > 1) { insertQuery += ","; }
+                        // Obtener el tipo de dato
+                        int columnType = rsmd.getColumnType(i);
+                        // Si es un dato de tipo string le agrega comillas simples
+                        if (columnType == Types.VARCHAR || columnType == Types.CHAR
+                                || columnType == Types.NVARCHAR || columnType == Types.NCHAR) {
+                            insertQuery += "'" + rsDataPostgres.getString(i) + "'";
+                        }
+                        // Si es una fecha le pone formato de fecha
+                        else if (columnType == Types.DATE) {
+                            insertQuery += "TO_DATE('"+rsDataPostgres.getString(i)+"', 'YYYY-MM-DD')";
+                        }
+                        else {
+                            insertQuery += rsDataPostgres.getString(i);
+                        }
+                    }
+                    insertQuery += ")";
+
+                    // Hacer el insert de la tupla en la BD destino
+                    Statement stmtOracleInsert = connOracle.createStatement();
+                    stmtOracleInsert.execute(insertQuery);
+                    System.out.println(insertQuery);
+
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(FrameConexion.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         else { JOptionPane.showMessageDialog(this, "Debe seleccionar una tabla."); }
     }//GEN-LAST:event_btnRepActionPerformed
@@ -675,7 +686,7 @@ public class FrameConexion extends javax.swing.JFrame {
             connPostgreSQL.createStatement();
 
             // Borrar el trigger si es que ya existe para evitar un exception
-            borrarTrigger(tablaReplicar, "");
+            borrarTrigger(tablaReplicar, "UpdateTriggerBitacora");
             
             // Crear el trigger de update
             String createTriggerQuery = "CREATE TRIGGER UpdateTriggerBitacora " +
